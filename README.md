@@ -41,7 +41,6 @@ job_predator/
 ├── main.py                     # CLI entry point (Typer + Rich)
 ├── requirements.txt            # Python dependencies
 ├── docker-compose.yml          # PostgreSQL + pgvector setup
-├── alembic.ini                 # Database migration config
 │
 ├── core/                       # Core infrastructure
 │   ├── config.py              # Environment configuration
@@ -98,9 +97,6 @@ job_predator/
 │
 ├── api/                        # FastAPI REST API
 │   └── main.py                # API routes
-│
-├── alembic/                    # Database migrations
-│   └── versions/              # Migration files
 │
 ├── templates/                  # Jinja2 templates (cover letters, emails)
 ├── scripts/                    # Utility scripts
@@ -165,13 +161,7 @@ LLM_MODEL_NAME=gpt-4
 > **Windows/Docker important**: Always use `127.0.0.1`, never `localhost`.
 > `localhost` resolves to IPv6 `::1` on Windows but Docker PostgreSQL only binds IPv4.
 
-### 3. Run database migrations
-
-```bash
-alembic upgrade head
-```
-
-### 4. Upload your CV
+### 3. Upload your CV
 
 ```bash
 python main.py upload-cv my_cv.pdf

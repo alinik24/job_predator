@@ -20,15 +20,6 @@ docker-compose up -d
 echo "-> Waiting for PostgreSQL to be ready..."
 sleep 5
 
-# 4. Install psycopg2 for Alembic (sync driver)
-pip install psycopg2-binary
-
-# 5. Run database migrations
-echo "-> Running Alembic migrations..."
-# For first run, use autogenerate:
-# alembic revision --autogenerate -m "initial"
-alembic upgrade head
-
 echo ""
 echo "=== Setup Complete ==="
 echo ""

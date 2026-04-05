@@ -41,7 +41,6 @@ scikit-learn>=1.5.0         # ML utilities for ranking
 # --- Database ---
 sqlalchemy[asyncio]>=2.0.30
 asyncpg>=0.29.0             # async PostgreSQL driver
-alembic>=1.13.0
 pgvector>=0.3.0             # pgvector Python client
 
 # --- Data ---

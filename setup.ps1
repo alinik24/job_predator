@@ -4,21 +4,17 @@
 Write-Host "=== JobPredator Setup ===" -ForegroundColor Green
 
 # Step 1: Install Python dependencies
-Write-Host "`n[1/5] Installing Python dependencies..." -ForegroundColor Cyan
+Write-Host "`n[1/3] Installing Python dependencies..." -ForegroundColor Cyan
 pip install -r requirements.txt
 if ($LASTEXITCODE -ne 0) { Write-Host "pip install failed" -ForegroundColor Red; exit 1 }
 
 # Step 2: Install Playwright + Chromium browser
-Write-Host "`n[2/5] Installing Playwright browsers..." -ForegroundColor Cyan
+Write-Host "`n[2/3] Installing Playwright browsers..." -ForegroundColor Cyan
 playwright install chromium
 playwright install-deps chromium 2>$null  # may not work on Windows, that's ok
 
-# Step 3: Install psycopg2 for Alembic (sync driver needed for migrations)
-Write-Host "`n[3/5] Installing psycopg2 for Alembic migrations..." -ForegroundColor Cyan
-pip install psycopg2-binary
-
-# Step 4: Start PostgreSQL + pgvector + Adminer via Docker
-Write-Host "`n[4/5] Starting database containers (Docker required)..." -ForegroundColor Cyan
+# Step 3: Start PostgreSQL + pgvector + Adminer via Docker
+Write-Host "`n[3/3] Starting database containers (Docker required)..." -ForegroundColor Cyan
 docker compose up -d
 if ($LASTEXITCODE -ne 0) {
     Write-Host "docker compose failed — is Docker Desktop running?" -ForegroundColor Red
@@ -27,11 +23,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Waiting 8 seconds for PostgreSQL to be ready..." -ForegroundColor Yellow
 Start-Sleep -Seconds 8
-
-# Step 5: Run Alembic migrations
-Write-Host "`n[5/5] Running database migrations..." -ForegroundColor Cyan
-alembic upgrade head
-if ($LASTEXITCODE -ne 0) { Write-Host "Alembic migration failed" -ForegroundColor Red; exit 1 }
 
 Write-Host "`n=== Setup Complete! ===" -ForegroundColor Green
 Write-Host @"

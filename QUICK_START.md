@@ -360,7 +360,7 @@ Before starting, verify:
 - [ ] Playwright installed (`playwright install chromium`)
 - [ ] `.env` file configured (copy from `.env.example`)
 - [ ] PostgreSQL running (docker-compose up -d)
-- [ ] Database migrated (`alembic upgrade head`)
+- [ ] Database created (automatic on first run)
 
 Optional but recommended:
 
