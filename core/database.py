@@ -1,6 +1,6 @@
 """
 SQLAlchemy async engine + session factory.
-Also provides a sync engine for Alembic migrations.
+Tables are created automatically from models via Base.metadata.create_all.
 """
 from __future__ import annotations
 
@@ -51,6 +51,6 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Create all tables (used in dev; production uses Alembic)."""
+    """Create all database tables from SQLAlchemy models."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
