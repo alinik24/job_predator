@@ -80,9 +80,18 @@ class LLMClient:
             )
         else:
             # OpenAI, OpenRouter, and compatible APIs use standard client
+            default_headers = {}
+            if self.provider == "openrouter":
+                # Add OpenRouter-specific headers for analytics and site name
+                default_headers = {
+                    "HTTP-Referer": "https://github.com/alinik24/job_predator",
+                    "X-Title": "JobPredator - AI Job Application Automation"
+                }
+
             return OpenAI(
                 base_url=self.api_base,
-                api_key=self.api_key
+                api_key=self.api_key,
+                default_headers=default_headers
             )
 
     def chat_completion(
