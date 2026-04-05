@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo:*)",
+      "Bash(python test_pipeline.py)",
+      "Bash(gh auth:*)",
+      "Bash(find /c/Users/alina/AppData/Local/Temp/claude -name \"bfgwbj4fx.output\" -exec cat {} \\\\;)"
+    ]
+  }
+}

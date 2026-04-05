@@ -1,0 +1,26 @@
+# NOTE: Using EXISTING postgres container (already running on port 5432)
+# The job_predator database has been created in the existing container.
+# Run: docker exec postgres psql -U postgres -c "CREATE DATABASE job_predator;"
+# pgvector was installed in the existing container.
+# Adminer is already running at http://localhost:8080
+
+# This file is kept for reference. No need to run docker compose up.
+# If you ever need a fresh standalone setup, uncomment below:
+
+# services:
+#   postgres:
+#     image: pgvector/pgvector:pg16
+#     container_name: job_predator_postgres
+#     restart: unless-stopped
+#     ports:
+#       - "5433:5432"   # use 5433 to avoid conflict with existing postgres
+#     environment:
+#       POSTGRES_DB: job_predator
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+
+# volumes:
+#   postgres_data:
