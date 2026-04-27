@@ -1,0 +1,203 @@
+# Knowledge Base: Position Categories and CV Section Mappings
+# This YAML defines which CV sections to include for each job category
+
+position_categories:
+  - category: AI/ML/GenAI
+    description: "AI, Machine Learning, Generative AI, NLP, Computer Vision, LLM applications"
+
+    keywords:
+      primary:
+        - artificial intelligence
+        - machine learning
+        - deep learning
+        - generative ai
+        - genai
+        - llm
+        - large language model
+        - nlp
+        - natural language processing
+        - computer vision
+        - neural network
+        - pytorch
+        - tensorflow
+        - transformers
+        - diffusion model
+        - rag
+        - retrieval augmented generation
+        - mlops
+        - model training
+        - fine-tuning
+        - prompt engineering
+      secondary:
+        - data science
+        - predictive analytics
+        - classification
+        - clustering
+        - regression
+        - xai
+        - explainable ai
+        - hugging face
+        - langchain
+        - embedding
+        - vector database
+
+    projects:
+      primary:
+        - "Digital Project Management Transformation at Benteler"
+        - "Predictive Quality Modeling for SMT Production (FORVIA HELLA)"
+        - "Personalized Deep-Research Platform for Idea Scouting"
+        - "Senior+ — AI-Driven HR Platform"
+        - "Physiognomy-Based Personality Analysis Application"
+      secondary:
+        - "Electrical Schema Digitalization for Industrial Automation (HIK)"
+        - "Machine Parameter Identification and Data Mapping in Battery Cell Production"
+        - "Legal-Tech SaaS Platform Development (Concept & Prototype)"
+
+    skills_primary:
+      - "AI/ML Engineering"
+      - "Data Science"
+
+    skills_secondary:
+      - "Cloud & Development"
+
+    research_interests:
+      - "AI and ML Applications"
+      - "Data-Driven Decision-Making"
+      - "Internet of Things (IoT)"
+
+    experience_roles:
+      - "Research Assistant (Fraunhofer IEM)"
+      - "Research Assistant (ENEA)"
+
+  - category: FinTech/Finance
+    description: "Financial technology, banking systems, payment solutions, financial analytics"
+
+    keywords:
+      primary:
+        - fintech
+        - financial technology
+        - banking
+        - payment
+        - blockchain
+        - cryptocurrency
+        - trading
+        - risk management
+        - financial analytics
+        - portfolio management
+        - algorithmic trading
+        - defi
+        - decentralized finance
+        - smart contracts
+        - digital banking
+        - payment gateway
+        - fraud detection
+        - credit scoring
+        - financial modeling
+      secondary:
+        - data analytics
+        - business intelligence
+        - automation
+        - saas
+        - platform
+        - compliance
+        - regulatory
+        - audit
+        - reporting
+
+    projects:
+      primary:
+        - "Legal-Tech SaaS Platform Development (Concept & Prototype)"
+        - "Personalized Deep-Research Platform for Idea Scouting"
+        - "Digital Project Management Transformation at Benteler"
+      secondary:
+        - "Senior+ — AI-Driven HR Platform"
+        - "Administrative Digitalization Platform for the Public Sector"
+
+    skills_primary:
+      - "Data Science"
+      - "Cloud & Development"
+
+    skills_secondary:
+      - "AI/ML Engineering"
+
+    research_interests:
+      - "Blockchain Applications"
+      - "Data-Driven Decision-Making"
+      - "AI and ML Applications"
+
+    experience_roles:
+      - "Research Assistant (Fraunhofer IEM)"
+
+  - category: Energy Systems
+    description: "Energy engineering, renewable energy, smart grids, energy optimization, power systems"
+
+    keywords:
+      primary:
+        - energy
+        - renewable energy
+        - solar
+        - wind
+        - photovoltaic
+        - power systems
+        - smart grid
+        - energy efficiency
+        - energy optimization
+        - power electronics
+        - microgrid
+        - energy storage
+        - battery
+        - sustainability
+        - energy management
+        - energy monitoring
+        - predictive maintenance
+        - building automation
+        - hvac
+        - energy audit
+        - demand response
+        - load forecasting
+        - power quality
+      secondary:
+        - cfd
+        - simulation
+        - optimization
+        - thermodynamics
+        - fluid dynamics
+        - heat transfer
+        - computational modeling
+        - process engineering
+        - industrial efficiency
+        - emissions reduction
+
+    projects:
+      primary:
+        - "Energy Audit and Optimization at Campus X, Rome"
+        - "DüsselPulse"
+        - "Hybrid Renewable Microgrid Design for Rural Namibia"
+        - "Sustainable Energy Transition via Geothermal Power"
+        - "Aerodynamic Optimization of Wind Turbine Blades Using Computational Fluid Dynamics"
+        - "Tidal Energy Harvester Design"
+        - "Techno-Economic Assessment of a Solar-Powered Hybrid RO-MED Desalination System in Bushehr, Iran"
+      secondary:
+        - "Techno-Economic Analysis and Heat Recovery Optimization of Solid Oxide Electrolyzers for Green Hydrogen"
+        - "Flare Gas Recovery System Optimization in Refineries"
+        - "Process Simulation and Optimization of the Reformer Unit in Kharg Petrochemical Complex"
+
+    skills_primary:
+      - "EE & CE"
+
+    skills_secondary:
+      - "Data Science"
+      - "AI/ML Engineering"
+
+    research_interests:
+      - "Energy Conversion and System Optimization"
+      - "Renewable Energy Systems and Sustainability"
+      - "Smart Grids and Power Systems in Smart Buildings"
+      - "Software Development for Energy Monitoring, Optimization, and Predictive Maintenance"
+
+    experience_roles:
+      - "Research Assistant (ENEA)"
+      - "Energy Efficiency Consultant"
+      - "Process Engineer"
+      - "Research Assistant – Sustainable Process Engineering"
+      - "Process Engineering Intern"
