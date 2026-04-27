@@ -1,3 +1,3 @@
-from cover_letter.generator import CoverLetterGenerator
-
-__all__ = ["CoverLetterGenerator"]
+# Cover letter package
+# Import components as they are implemented
+__all__ = []
