@@ -163,6 +163,45 @@ class CVProfile(Base):
     updated_at = Column(DateTime, onupdate=func.now())
 
 
+class UserProfile(Base):
+    """Comprehensive user profile built from all documents."""
+    __tablename__ = "user_profile"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(String(64), unique=True, nullable=False, default="default")
+
+    # Personal information
+    full_name = Column(String(256))
+    email = Column(String(256))
+    phone = Column(String(64))
+    location = Column(String(256))
+    linkedin_url = Column(String(512))
+    github_url = Column(String(512))
+
+    # Professional summary
+    current_title = Column(String(256))
+    years_experience = Column(BigInteger)
+    career_summary = Column(Text)
+
+    # Structured data (JSON)
+    education = Column(JSON)  # [{degree, institution, year, gpa, field}]
+    technical_skills = Column(JSON)  # {category: [skills]}
+    languages = Column(JSON)  # [{language, proficiency}]
+    certifications = Column(JSON)  # [{name, issuer, date}]
+
+    # Preferences
+    job_preferences = Column(JSON)  # {locations, remote, salary_min, ...}
+    career_goals = Column(Text)
+
+    # Writing style analysis
+    writing_style = Column(JSON)  # {tone, common_phrases, structure}
+
+    # Metadata
+    source_documents = Column(JSON)  # [{file_path, category, processed_at}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Document(Base):
     __tablename__ = "documents"
 

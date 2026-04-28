@@ -1,10 +1,28 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh repo:*)",
-      "Bash(python test_pipeline.py)",
-      "Bash(gh auth:*)",
-      "Bash(find /c/Users/alina/AppData/Local/Temp/claude -name \"bfgwbj4fx.output\" -exec cat {} \\\\;)"
+      "Bash(python:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(grep -E \"^d|\\\\.py$\")",
+      "Bash(.venv/Scripts/python.exe -c \"import pydantic; print\\('Pydantic installed:', pydantic.VERSION\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"from core.config import settings; from agents.form_filler_agent import fill_application_form; print\\('✓ All imports successful!'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"from agents.form_filler_agent import fill_application_form; print\\('Import successful'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"from agents.form_filler_agent import fill_application_form; print\\('✓ Bug fix successful'\\)\")",
+      "Bash(docker start:*)",
+      "Bash(docker exec:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(ls -lh \"C:\\\\mydesktop\\\\resproj_thesis\\\\job_predator\"/*.md)",
+      "Bash(rm:*)",
+      "Bash(xargs ls:*)",
+      "Bash(pip install:*)",
+      "Bash(ls -la \"C:\\\\mydesktop\\\\resproj_thesis\\\\job_predator\"/*.md)",
+      "Bash(git add:*)",
+      "Bash(git commit -m 'feat: add learned KB from 45 historical cover letters:*)",
+      "Bash(ls -la *.yaml)",
+      "Bash(rm kb_mappings.yaml)",
+      "Bash(mv kb_mappings_learned.yaml kb_mappings.yaml)",
+      "Bash(git commit -m 'feat: continuous learning KB system:*)"
     ]
   }
 }

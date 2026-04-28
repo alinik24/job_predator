@@ -1,652 +1,312 @@
-# JobPredator
+# JobPredator - AI-Powered Job Application Assistant
 
-An AI-powered adaptive job hunter for Germany. Scrapes 21+ job boards, scores every position against your full CV profile with **context-aware semantic understanding**, learns from your feedback, and generates ATS-optimized tailored cover letters.
+A practical, simple tool to manage your digital CV, apply cover letter rules, and automate job application form filling.
 
-## 🚀 New Enhanced Features
+## 🎯 What This Does
 
-### 🧠 Context-Aware Semantic Matching
-- **Beyond keywords**: Understands that "Wind Design Engineer" relates to "Energy Engineering"
-- **Knowledge Graph**: 100+ domain relationships (energy → wind/solar/grid, ML → deep learning/neural networks)
-- **Hybrid scoring**: Combines domain knowledge (30%) + LLM reasoning (70%) for accurate matching
+1. **Digital CV Management**: Your CV stored as markdown - easy to read, update, and query
+2. **Cover Letter Rules**: Master prompt with all your experience, projects, and tailoring logic
+3. **Form Filling**: Automatically fill job application forms using your CV data
+4. **Agents**: Python agents that use your CV + cover letter rules to help with applications
 
-### 🔍 GitHub Job Mining
-- Scrapes job postings from **GitHub repositories**
-- Finds "We're hiring" in READMEs, career page links
-- Filters by topics (machine-learning, energy, data-science) and company stars
-- Perfect for finding startup and open-source company jobs
+## 🚀 Quick Start
 
-### 📄 ATS Optimization (0-100 Score)
-- Analyzes resumes for **Applicant Tracking System** compatibility
-- Keyword density analysis and missing keyword detection
-- Formatting issue detection (tables, special characters, columns)
-- Pre-submission optimization suggestions
+### 1. Setup
 
-### 🤖 LinkedIn Easy Apply Automation
-- **GPT-powered form filling** for LinkedIn applications
-- Intelligent answer generation for screening questions
-- Multi-step application handling with human-like delays
-- Based on Auto_Jobs_Applier_AIHawk (20k+ GitHub stars)
+```powershell
+# Clone and enter directory
+cd C:\mydesktop\resproj_thesis\job_predator
 
-### 📊 Enhanced Coverage
-- **21 job boards** (was 20): Added GitHub
-- Semantic HTML parsing with trafilatura
-- Better anti-bot evasion with playwright-stealth
+# Install dependencies
+pip install -r requirements.txt
+
+# Start Docker services (PostgreSQL + pgvector)
+docker-compose up -d
+
+# Initialize database
+python init_db.py
+```
+
+### 2. Update Your CV
+
+Edit your digital CV:
+```powershell
+# Open in your editor
+code profile/cv.md
+```
+
+The CV is in markdown format with YAML frontmatter. Update:
+- Personal info (name, email, phone, location)
+- Current role and employer
+- Work experience
+- Projects
+- Skills
+- Languages
+
+### 3. Update Cover Letter Rules
+
+Your cover letter master prompt is at:
+```
+cover_letter/Ali_Nazarikhah_Cover_Letter_Master_Prompt.md
+```
+
+This contains:
+- Fixed paragraphs (education, closing)
+- Project selection rules
+- Skills by role type
+- Tone and style guidelines
+- Handling missing experience
+
+Update this file to modify how cover letters are generated.
+
+### 4. Fill Application Forms
+
+**Option A: Let JobPredator open a browser**
+```powershell
+python main.py fill-form --url "https://jobs.company.com/apply/123"
+```
+
+**Option B: Use your existing Chrome browser (recommended)**
+
+```powershell
+# Start Chrome with debugging
+.\start_chrome_debug.bat
+
+# Navigate to the application page in Chrome
+# Then run:
+python main.py fill-form --url "https://..." --use-existing-browser
+```
+
+See `FORM_FILLER_GUIDE.md` for detailed instructions.
+
+### 5. Generate Application Materials
+
+```powershell
+# Generate cover letter + skills analysis for a job
+python main.py apply --job-url "https://jobs.company.com/posting/123"
+```
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 job_predator/
-├── main.py                     # CLI entry point (Typer + Rich)
-├── requirements.txt            # Python dependencies
-├── docker-compose.yml          # PostgreSQL + pgvector setup
+├── profile/                    # YOUR DATA (update these!)
+│   ├── cv.md                  # Your digital CV (markdown + YAML)
+│   ├── cv_reader.py           # CV parser (don't edit)
+│   └── cover_letter_rules.py  # Rules loader (don't edit)
+│
+├── cover_letter/               # Cover letter rules
+│   └── Ali_Nazarikhah_Cover_Letter_Master_Prompt.md
+│
+├── agents/                     # Application agents
+│   ├── form_filler_agent.py   # Form filling automation
+│   ├── job_application_agent.py # Application package generator
+│   └── profile_builder_agent.py # (legacy, being refactored)
 │
 ├── core/                       # Core infrastructure
-│   ├── config.py              # Environment configuration
-│   ├── database.py            # SQLAlchemy async setup
-│   ├── models.py              # Database models (jobs, cv_profile, user_memory, etc.)
-│   └── user_profile.py        # User profile YAML manager
+│   ├── config.py              # Configuration
+│   ├── database.py            # Database connection
+│   └── models.py              # Database models
 │
-├── scrapers/                   # Job board scrapers (20+ platforms)
-│   ├── aggregator.py          # Parallel scraping orchestrator
-│   ├── stepstone_scraper.py   # StepStone
-│   ├── xing_scraper.py        # XING
-│   ├── fraunhofer_scraper.py  # Fraunhofer Institute
-│   ├── euraxess_scraper.py    # EURAXESS (EU research)
-│   ├── helmholtz_scraper.py   # Helmholtz Association
-│   ├── wellfound_scraper.py   # Wellfound (startups)
-│   ├── heise_scraper.py       # Heise Jobs (tech)
-│   ├── academics_scraper.py   # Academics.de
-│   ├── zeit_scraper.py        # Zeit Jobs
-│   ├── jobspy_scraper.py      # LinkedIn, Indeed, Glassdoor wrapper
-│   └── ...                    # 10+ more platforms
+├── cv/                         # CV utilities
+│   ├── cv_parser.py           # (legacy PDF parsing)
+│   └── cover_letter_learner.py
 │
-├── cv/                         # CV parsing and position generation
-│   ├── cv_parser.py           # Main CV parser (orchestrates extractors)
-│   ├── pdf_extractor.py       # PDF → text extraction
-│   ├── latex_extractor.py     # LaTeX/Overleaf → structured data
-│   ├── position_generator.py  # LLM-based job title suggestions
-│   └── cover_letter_learner.py # Learns writing style from existing CLs
-│
-├── matching/                   # Job scoring and analysis
-│   ├── scorer.py              # LLM-based CV-job matching (0-10 score)
-│   ├── embedder.py            # Semantic embeddings (sentence-transformers)
-│   ├── job_skills_analyzer.py # Per-job skills matrix + ATS scoring
-│   └── cover_letter_generator.py # Tailored cover letter generation
-│
-├── agents/                     # LangGraph workflow
-│   └── graph.py               # 7-node DAG (parse → scrape → score → analyze)
-│
-├── applications/               # Auto-application modules
-│   ├── linkedin_applier.py    # LinkedIn Easy Apply automation
-│   ├── stepstone_applier.py   # StepStone form filler
-│   ├── indeed_applier.py      # Indeed Quick Apply
-│   └── form_ai.py             # Generic form field detection
-│
-├── outreach/                   # HR contact finding + email outreach
-│   └── ...
-│
-├── cover_letter/               # Cover letter generation
-│   ├── generator.py           # Main CL generator
-│   └── exporter.py            # PDF/DOCX export
-│
-├── documents/                  # Document Q&A
-│   ├── store.py               # Vector store (pgvector)
-│   └── qa.py                  # RAG-based document retrieval
-│
-├── api/                        # FastAPI REST API
-│   └── main.py                # API routes
-│
-├── templates/                  # Jinja2 templates (cover letters, emails)
-├── scripts/                    # Utility scripts
-├── user_documents/             # User CVs, cover letters (gitignored)
-├── output/                     # Generated files (gitignored)
-└── memory/                     # RLHF state (gitignored)
+├── main.py                     # CLI entry point
+├── docker-compose.yml          # PostgreSQL + Neo4j
+├── init_db.py                  # Database initialization
+└── requirements.txt            # Python dependencies
 ```
 
 ---
 
-## Architecture
+## 🛠️ Key Commands
 
+### CV Management
+
+```powershell
+# View your CV sections
+python -c "from profile.cv_reader import get_cv; cv = get_cv(); print(cv.full_name, cv.current_title)"
+
+# Search your CV
+python -c "from profile.cv_reader import search_cv; results = search_cv('machine learning'); print(results[:3])"
+
+# Get your skills
+python -c "from profile.cv_reader import get_cv_skills; print(get_cv_skills()[:10])"
 ```
-JobPredator — AI-Powered Adaptive Job Hunter
-├── CV parsing           — PDF / LaTeX / Overleaf → structured profile
-├── Position generator   — LLM analyses your CV → suggests job titles to search
-├── Enhanced Scraping    — 21+ boards including GitHub job mining
-│   ├── Traditional boards   — StepStone, XING, LinkedIn, Indeed, etc.
-│   ├── Research platforms   — EURAXESS, Fraunhofer, Helmholtz
-│   └── NEW: GitHub jobs     — mines hiring from READMEs, career pages
-│
-├── Hybrid Semantic Scoring — Context-aware matching beyond keywords
-│   ├── Knowledge Graph      — understands "wind engineer" → "energy"
-│   ├── Domain relationships — energy → wind/solar/grid/power systems
-│   └── LLM + embeddings     — 70% LLM + 30% semantic for final score
-│
-├── ATS Optimization     — maximizes resume pass-through rate
-│   ├── Keyword density      — extract & match job-specific keywords
-│   ├── Formatting check     — detects ATS-unfriendly elements
-│   └── ATS score (0-100)    — pre-submission optimization
-│
-├── Adaptive memory      — RLHF loop: learns from your feedback each round
-├── Gap tracker          — identifies missing skills across all top jobs
-├── Skills analyzer      — per-job: have / missing / niche keywords / ATS score
-├── Cover letter gen     — tailored letters in your own writing style + ATS keywords
-├── LinkedIn Easy Apply  — GPT-powered auto-application (AIHawk-inspired)
-└── Outreach             — HR contact finder + personalised emails
+
+### Cover Letter Rules
+
+```powershell
+# View master prompt
+python -c "from profile.cover_letter_rules import get_master_prompt; print(get_master_prompt()[:500])"
+
+# Get fixed education paragraph
+python -c "from profile.cover_letter_rules import get_fixed_education; print(get_fixed_education())"
+
+# Get project rules
+python -c "from profile.cover_letter_rules import get_project_selection_rules; print(list(get_project_selection_rules().keys()))"
+```
+
+### Form Filling
+
+```powershell
+# Fill form in new browser
+python main.py fill-form --url "https://..."
+
+# Fill form in your Chrome
+.\start_chrome_debug.bat
+python main.py fill-form --url "..." --use-existing-browser
+
+# Fill and auto-submit (careful!)
+python main.py fill-form --url "..." --use-existing-browser --submit
+```
+
+### Database
+
+```powershell
+# Start database
+docker-compose up -d
+
+# Stop database
+docker-compose down
+
+# Access database UI
+# http://localhost:8080 (Adminer)
+# Server: postgres
+# Username: postgres
+# Password: postgres
+# Database: job_predator
 ```
 
 ---
 
-## First-Time Setup
+## 📖 Documentation
 
-### 1. Install
+- **FORM_FILLER_GUIDE.md** - Detailed form filling instructions
+- **ARCHITECTURE.md** - System architecture and design
+- **DEVELOPMENT.md** - Development workflow and guidelines
 
-```bash
-pip install -r requirements.txt
-playwright install chromium
-```
+---
 
-### 2. Configure `.env`
+## 🔧 Configuration
+
+Create or edit `.env` file:
 
 ```env
+# Database
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/job_predator
-DATABASE_URL_SYNC=postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/job_predator
-LLM_API_BASE_URL=https://api.openai.com/v1
+
+# OpenAI/Azure (for AI features)
+LLM_API_BASE_URL=https://your-azure-endpoint.openai.azure.com/
 LLM_API_KEY=your-api-key
-LLM_API_VERSION=2024-01-01
-LLM_MODEL_NAME=gpt-4
-```
+LLM_MODEL_NAME=gpt-5-chat
+LLM_API_VERSION=2024-08-01-preview
 
-> **Windows/Docker important**: Always use `127.0.0.1`, never `localhost`.
-> `localhost` resolves to IPv6 `::1` on Windows but Docker PostgreSQL only binds IPv4.
-
-### 3. Upload your CV
-
-```bash
-python main.py upload-cv my_cv.pdf
-# or from Overleaf directory:
-python main.py upload-cv cv/
-```
-
-### 5. Create your personal profile (beyond the CV)
-
-```bash
-python main.py profile --init
-```
-
-This creates `output/user_profile.yaml`. **Edit this file** — it teaches the AI:
-- Your personal motivation and career goals
-- Extra context for specific experiences ("what I actually learned / am proud of")
-- Skills with concrete evidence (project-level proof)
-- Dealbreakers, remote preferences, availability
-- Cover letter writing preferences (language, tone)
-
-The more you fill in, the more personalised your cover letters and scoring become.
-
-### 6. Learn your writing style (run once)
-
-```bash
-python main.py learn-style --dir "C:/mydesktop/Career Application/Cover Letters"
-```
-
-Reads all your PDFs, analyses tone, structure, recurring strengths, and characteristic phrases. Future cover letters will match your authentic style.
-
----
-
-## Core Workflow
-
-### Step 1 — Generate position suggestions from your CV
-
-```bash
-python main.py suggest-positions --cv my_cv.pdf
-```
-
-The LLM analyses **everything** in your CV: education level and field, thesis topic, skills, experience, projects, publications, languages, certifications. It suggests:
-
-| Category | Examples |
-|----------|---------|
-| **Primary roles** | Energy Data Scientist, ML Engineer for Energy Systems |
-| **Adjacent roles** | MLOps Engineer, Research Software Engineer |
-| **Research roles** | Fraunhofer / Helmholtz / EURAXESS positions |
-| **German-specific** | Werkstudent Energieinformatik, KI Ingenieur, German job titles |
-| **Extra keywords** | "KI Energiesysteme", "Python Machine Learning Energie" |
-
-Output: `output/suggested_positions.yaml`
-
----
-
-### Step 2 — Review and approve positions
-
-Open `output/suggested_positions.yaml` and set `approved: true/false`:
-
-```yaml
-instructions: |
-  Set 'approved: true' for positions you want to search.
-  Add new positions manually under any category.
-  Then run: python main.py scrape-from-suggestions
-
-market_insight: |
-  Strong positioning at the intersection of energy engineering and AI/ML.
-  German market has high demand for candidates who understand both domains.
-  Fraunhofer, Helmholtz, and energy companies (E.ON, RWE, Siemens) are top targets.
-
-primary_roles:
-  - title: Energy Data Scientist
-    title_de: Energiedaten Wissenschaftler
-    rationale: Core match — MSc Energy + Python + ML experience
-    confidence: 0.92
-    sectors: [Energy, Research, Tech]
-    seniority: junior/mid
-    approved: true          # ← already approved by default
-
-  - title: Grid Intelligence Engineer
-    title_de: Netzintelligenz Ingenieur
-    confidence: 0.85
-    approved: true
-
-adjacent_roles:
-  - title: MLOps Engineer
-    confidence: 0.70
-    approved: false         # ← not approved by default; set true to include
-
-research_roles:
-  - title: Research Software Engineer
-    title_de: Wissenschaftlicher Softwareentwickler
-    rationale: Ideal for Fraunhofer/DFG/Max Planck — research background
-    confidence: 0.90
-    approved: true          # ← research roles approved by default
-
-german_specific_roles:
-  - title: Werkstudent Energietechnik
-    title_de: Werkstudent Energietechnik
-    approved: true
-
-extra_search_keywords:
-  - "KI Energiesysteme"
-  - "Python Machine Learning Energie"
-  - "Smart Grid Data Engineer"
-  - "Predictive Maintenance Power Grid"
-
-avoid_titles:
-  - "Frontend Developer — no web UI experience in CV"
+# Neo4j (optional)
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=jobpredator123
 ```
 
 ---
 
-### Step 3 — Scrape all platforms using approved positions
+## 🎓 How It Works
 
-```bash
-python main.py scrape-from-suggestions
-```
+### 1. Digital CV (Markdown)
 
-Reads every `approved: true` title and keyword and searches all 20+ platforms in parallel.
-Both the English and German versions of each title are used.
+Your CV is stored as `profile/cv.md`:
+- **Human-readable**: Edit in any text editor
+- **Version-controlled**: Track changes with git
+- **Queryable**: Agents can search and extract data
+- **Structured**: YAML frontmatter + markdown sections
 
----
+### 2. Cover Letter Master Prompt
 
-### Step 4 — Score all scraped jobs
+The file `cover_letter/Ali_Nazarikhah_Cover_Letter_Master_Prompt.md` contains:
+- Fixed paragraphs that appear in every letter
+- Project descriptions and when to use them
+- Skills lists by role type
+- Rules for tone, structure, and handling missing experience
 
-```bash
-python main.py score
-# After giving feedback (recommended):
-python main.py score --memory
-```
+This is the **source of truth** for all cover letter generation.
 
-Scoring uses ALL CV fields (education level, thesis, projects, publications) and your profile
-context. The `--memory` flag additionally applies preference adjustments learned from your
-feedback (see Adaptive Memory section below).
+### 3. Agents
 
----
-
-### Step 5 — Browse results
-
-```bash
-python main.py list-jobs --min-score 7.5
-python main.py list-jobs --min-score 7.0 --limit 50 --gaps
-python main.py list-jobs --source fraunhofer --min-score 0
-```
+Python agents that:
+- Read your CV using `profile/cv_reader.py`
+- Apply cover letter rules using `profile/cover_letter_rules.py`
+- Fill forms automatically using Playwright
+- Generate tailored cover letters
+- Create application packages
 
 ---
 
-## Per-Job Deep Analysis
+## 🐛 Troubleshooting
 
-### Analyse skills matrix + niche keywords
+### Database connection error
 
-```bash
-# Single job
-python main.py analyze-job --job-id <uuid>
+```powershell
+# Check Docker is running
+docker ps
 
-# All top-scored jobs (batch)
-python main.py analyze-job --all --min-score 7.5 --limit 15
+# If postgres is not running
+docker-compose up -d
+
+# Recreate database
+docker-compose down -v
+docker-compose up -d
+python init_db.py
 ```
 
-Produces for each job:
-- **Skills matrix**: every required skill → whether you have it (with CV evidence)
-- **Missing skills**: gaps + concrete workarounds to mention anyway
-- **Niche keywords**: company/domain-specific terms to learn (e.g. if the company uses digital twins for grid simulation, you get that specific context — not just "data engineering")
-- **ATS score estimate**: how well your CV would score in their ATS
-- **CV sections to emphasise**: which experiences/projects to highlight
-- **Interview preparation topics**
+### Form filling not working
 
-### View skills for a job
+```powershell
+# Check Chrome debugging is enabled
+.\start_chrome_debug.bat
 
-```bash
-python main.py job-skills --job-id <uuid>
+# Check endpoint
+curl http://127.0.0.1:9222/json/version
+
+# If port is blocked, try different port
+chrome.exe --remote-debugging-port=9223
+python main.py fill-form --url "..." --use-existing-browser --cdp-url "http://127.0.0.1:9223"
 ```
 
-Example output:
-```
-=================================================================
-SKILLS ANALYSIS: Energy Data Scientist @ E.ON Digital Technology
-=================================================================
-ATS Match Score: 8.2/10
-Summary: Strong fit — energy domain + Python ML directly relevant...
+### CV not loading
 
-✓ YOU HAVE (12 skills):
-   ★★★★★ Python [tech] — extensive use in thesis + Fraunhofer work
-   ★★★★★ Energy Systems Knowledge [domain] — MSc in energy engineering
-   ★★★★  Machine Learning [tech] — applied in thesis for energy forecasting
+```powershell
+# Check CV file exists
+ls profile/cv.md
 
-✗ MISSING (3 skills):
-   ★★★★  Apache Kafka [must / tech]
-   ★★★   Azure Cloud [nice / tech]
-
-GAP WORKAROUNDS:
-   • Apache Kafka: mention Python async + message queuing concepts
-
-EMPHASISE IN APPLICATION:
-   → Master thesis on power system optimisation
-   → Fraunhofer working student experience
-
-NICHE KEYWORDS TO LEARN:
-   [Digital Twin of Energy Grid]
-     Why: Core technology this team uses for grid operations
-     Learn: IEEE papers on digital twins; ENTSO-E standards docs
-
-ATS KEYWORDS TO ADD:
-   energy management system, EMS, SCADA, time series forecasting
-
-PREPARE FOR INTERVIEW:
-   • Questions about power flow algorithms
-   • Why E.ON vs. competitors (Siemens Energy, RWE, EnBW)
-
-Generate cover letter: python main.py cover-letter --job-id abc123
+# Test CV reader
+python -c "from profile.cv_reader import get_cv; print(get_cv().full_name)"
 ```
 
 ---
 
-## Cover Letter Generation
+## 🚧 Upcoming Features
 
-### Generate a tailored cover letter
-
-```bash
-python main.py cover-letter --job-id <uuid>
-python main.py cover-letter --job-id <uuid> --lang de --output cl.txt
-```
-
-The generator combines:
-1. Your full CV (all sections, rich mode — education, thesis, projects, publications)
-2. `output/user_profile.yaml` context (motivation, experience context, skills evidence)
-3. Your **learned writing style** (tone, structure, characteristic phrases from your real CLs)
-4. Deep job analysis (top requirements, company mission, cultural cues, killer keywords)
-5. Skills matrix (most relevant CV sections to highlight for this specific role)
-
-The result:
-- In your authentic voice (not generic)
-- Specific to THIS company and role
-- Mentions your most relevant project/education/experience
-- Contains ATS-targeted keywords
-- In German or English (auto-detected from job posting)
-- One page (~400 words)
+- [ ] OpenWebUI integration for chat interface
+- [ ] Job scraping from multiple sources
+- [ ] Automatic job matching and scoring
+- [ ] Email outreach automation
+- [ ] Application tracking dashboard
 
 ---
 
-## Adaptive Memory & RLHF Learning
+## 📄 License
 
-JobPredator learns from every interaction. Over 3–5 feedback rounds it converges on your actual preferences.
-
-### Give feedback on jobs
-
-```bash
-python main.py feedback --job-id <uuid> --decision apply --reason "Energy + ML fit"
-python main.py feedback --job-id <uuid> --decision skip --reason "Too much frontend"
-python main.py feedback --job-id <uuid> --decision interested --user-score 8.5
-```
-
-**Decisions**: `apply`, `interested`, `skip`, `blacklist_company`
-
-What happens internally:
-- **apply/interested**: updates your preference embedding (EMA of liked-job embeddings). Future jobs similar to this one get a score boost
-- **skip**: similar future jobs are penalised
-- **blacklist_company**: that company is permanently skipped
-- **user-score**: overrides the LLM score for this specific job
-
-### Claim skills the AI missed
-
-```bash
-python main.py remember --skill "Apache Kafka" --status have_it
-python main.py remember --skill "Azure Cloud" --status learning
-python main.py remember --skill "React" --status not_interested
-```
-
-After claiming skills, re-run: `python main.py score --memory`
-
-The CV summary injected into the LLM prompt will include your claimed skills alongside CV evidence.
-
-### How the learning loop works
-
-```
-Round 1: LLM scores jobs from CV only
-         → You browse results, give feedback on 5-10 jobs
-         → Claim skills the AI missed
-
-Round 2: python main.py score --memory
-         → Enriched CV (claimed skills visible)
-         → Score adjustment: cosine similarity to liked/disliked embeddings
-         → Hard penalty for blacklisted companies
-         → Scores shift toward your actual preferences
-
-Round 3+: Each round improves as more feedback accumulates
-          The k-NN comparison pool grows → adjustments become more precise
-```
-
-### Show memory state
-
-```bash
-python main.py memory
-```
+MIT License - See LICENSE file
 
 ---
 
-## Skill Gap Analysis
+## 🤝 Contributing
 
-### Analyse missing skills across all top jobs
-
-```bash
-python main.py gaps --min-score 7.5
-python main.py gaps --min-score 7.0 --limit 200
-```
-
-Uses LLM-based semantic normalisation (not regex). Groups similar gap descriptions:
-
-```
-Top Missing Skills (across all high-scoring jobs):
-  1. MLOps / Production ML Deployment   (33 jobs)
-  2. Cloud Platforms (AWS/GCP/Azure)     (30 jobs)
-  3. German Language Proficiency         (17 jobs)
-  4. Commercial AI/ML Experience         (16 jobs)
-  5. CI/CD Pipelines                     (13 jobs)
-```
-
-### Get CV improvement suggestions for Overleaf
-
-```bash
-python main.py cv-suggestions --output overleaf_additions.tex
-```
-
-Generates LaTeX snippets you can paste into your Overleaf CV:
-
-```latex
-% ADD TO SKILLS / EXPERIENCE SECTION:
-% MLOps / Production ML Deployment
-\item Deployed ML pipeline to production using containerised Python services;
-  monitored model drift with structured logging (applicable from thesis work).
-
-% Cloud Platforms
-\item Familiar with Azure cloud services (storage, compute) from Fraunhofer
-  HPC projects; experienced with cloud-native data processing concepts.
-```
-
-### Claim a gap skill you actually have
-
-```bash
-python main.py remember --skill "MLOps" --status have_it
-```
+This is a personal tool, but feel free to fork and adapt for your own use.
 
 ---
 
-## Job Boards Coverage
-
-| Category | Platforms |
-|----------|-----------|
-| **Major German** | StepStone, XING, Indeed.de, Monster.de, Jobware |
-| **German Niche** | Heise Jobs (tech), Academics.de (research), Ingenieur.de, Absolventa (entry-level), Jobs.de, Karriere.at, EuroEngineerJobs |
-| **Research & Academic** | EURAXESS (EU-wide, 43 countries), Fraunhofer (76 institutes), Helmholtz Association (18 centres), Zeit Jobs |
-| **International** | LinkedIn, Glassdoor, ZipRecruiter (via JobSpy) |
-| **Startup** | Wellfound (ex-AngelList, 130k+ startup jobs) |
-| **Government** | Bundesagentur für Arbeit |
-
-### Why research platforms are critical for technical profiles
-
-- **EURAXESS**: EU Commission portal — PhD positions, postdocs, research engineers. Marie Skłodowska-Curie fellowships. 43 European countries.
-- **Fraunhofer**: Germany's largest applied research org (76 institutes). Fraunhofer IEE, IEG, IOSB are directly relevant for energy + AI profiles. Working students, thesis students, engineers.
-- **Helmholtz**: 18 centres. FZJ (energy/supercomputing), DLR (aerospace/energy), KIT (tech).
-- **Zeit Jobs**: Die Zeit's board — strong for academic, research, and senior specialist roles.
-- **Wellfound**: Shows salary and equity upfront. Strong EU/Berlin startup coverage (N26, Klarna, Personio, etc.).
-
----
-
-## Complete Command Reference
-
-```bash
-# ── SETUP ──────────────────────────────────────────────────────────────────
-python main.py upload-cv my_cv.pdf
-python main.py profile --init                   # Create personal context template
-python main.py profile --show                   # Preview what the AI will see
-python main.py learn-style --dir "path/to/CLs"  # Learn writing style from existing CLs
-
-# ── POSITION WORKFLOW ──────────────────────────────────────────────────────
-python main.py suggest-positions --cv my_cv.pdf
-# → edit output/suggested_positions.yaml (set approved: true/false)
-python main.py scrape-from-suggestions
-python main.py scrape-from-suggestions --suggestions custom_positions.yaml
-
-# ── MANUAL SCRAPE ──────────────────────────────────────────────────────────
-python main.py scrape -p "Data Engineer" -l Deutschland
-python main.py scrape -p "Energy Data Scientist" -p "Grid AI" -l München -l Berlin
-python main.py scrape -p "Werkstudent Python" --source fraunhofer --source euraxess
-python main.py scrape -p "Research Engineer" --source euraxess --source helmholtz
-
-# ── SCORING ────────────────────────────────────────────────────────────────
-python main.py score                             # Score unscored jobs (LLM only)
-python main.py score --memory                   # Score with adaptive memory adjustments
-python main.py score --all                      # Rescore all jobs
-
-# ── PER-JOB DEEP ANALYSIS ─────────────────────────────────────────────────
-python main.py analyze-job --job-id <uuid>       # Full skills matrix + niche keywords
-python main.py analyze-job --all --min-score 7.5 --limit 15  # Batch analysis
-python main.py job-skills --job-id <uuid>        # View stored skills analysis
-python main.py cover-letter --job-id <uuid>      # Generate tailored cover letter
-python main.py cover-letter --job-id <uuid> --lang de --output cl.txt
-
-# ── BROWSE RESULTS ─────────────────────────────────────────────────────────
-python main.py list-jobs --min-score 7.5
-python main.py list-jobs --min-score 7.0 --limit 50 --gaps
-python main.py list-jobs --source fraunhofer --min-score 0
-python main.py list-jobs --status queued
-
-# ── MEMORY & LEARNING ──────────────────────────────────────────────────────
-python main.py feedback --job-id <uuid> --decision apply --reason "..."
-python main.py feedback --job-id <uuid> --decision skip
-python main.py feedback --job-id <uuid> --decision interested --user-score 8.5
-python main.py feedback --job-id <uuid> --decision blacklist_company
-python main.py remember --skill "Apache Kafka" --status have_it
-python main.py remember --skill "Azure" --status learning
-python main.py remember --skill "React" --status not_interested
-python main.py memory
-
-# ── SKILL GAPS ─────────────────────────────────────────────────────────────
-python main.py gaps --min-score 7.5
-python main.py gaps --min-score 7.0 --limit 200
-python main.py cv-suggestions --output overleaf.tex
-
-# ── FULL PIPELINE ──────────────────────────────────────────────────────────
-python main.py run --cv cv.pdf -p "Energy Data Scientist" -l Deutschland
-python main.py run --cv cv.pdf -p "Data Engineer" --live   # actually apply
-
-# ── API ────────────────────────────────────────────────────────────────────
-python main.py api                               # Start FastAPI on :8000
-python main.py api --port 8080
-```
-
----
-
-## Database Schema
-
-| Table | Purpose |
-|-------|---------|
-| `cv_profile` | Parsed CV (JSON fields for skills, education, experience, etc.) |
-| `jobs` | All scraped jobs with score, status, match_reasons |
-| `job_skills_matrix` | Per-job: required skills, user has/missing, niche keywords, ATS score |
-| `cover_letters` | Generated cover letters per job |
-| `cover_letter_style` | Learned writing style from existing cover letters |
-| `user_memory` | RLHF state: claimed skills, preferences, preference embedding |
-| `job_feedback` | User decisions (apply/skip/etc.) with embeddings for k-NN |
-| `skill_gaps` | Aggregated missing skills across all jobs |
-| `search_sessions` | Scraping run history |
-| `documents` | Uploaded supporting documents |
-| `applications` | Application tracking |
-| `hr_contacts` | Found HR contacts per company |
-
----
-
-## Troubleshooting
-
-### `WinError 64: The specified network name is no longer available`
-
-Use `127.0.0.1` instead of `localhost` in `.env`. On Windows, `localhost` resolves to IPv6 `::1`,
-but Docker PostgreSQL only binds to IPv4.
-
-### Playwright scrapers return no results
-
-Some SPA job boards (Heise, StepStone, XING, Wellfound) require JavaScript rendering:
-```bash
-playwright install chromium
-```
-Set `HEADLESS_BROWSER=false` in `.env` to watch the browser for debugging.
-
-### Cover letter style not being applied
-
-Run `learn-style` first. Without it, the generator still works but uses generic style guidance.
-
-### Gap analysis shows fragments like "mention of", "Unclear"
-
-This was a known bug in older versions. Fixed: gaps now use LLM-based batch normalisation
-instead of regex parsing. Run `python main.py gaps` again.
-
----
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| LLM | OpenAI API compatible (GPT-4, Claude, etc.) |
-| Embeddings | sentence-transformers all-MiniLM-L6-v2 (384-dim) |
-| Semantic search | pgvector (PostgreSQL extension) |
-| Database | PostgreSQL 16 + pgvector |
-| Async DB | SQLAlchemy 2.0 async + asyncpg + NullPool |
-| Web scraping | httpx + BeautifulSoup + Playwright |
-| Pipeline | LangGraph (7-node DAG) |
-| CLI | Typer + Rich |
-| API | FastAPI |
+**Last Updated**: April 27, 2026
