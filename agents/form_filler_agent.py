@@ -266,79 +266,42 @@ class FormFillerAgent:
             raw = f"http://{raw}"
         return raw.rstrip("/")
 
-    @staticmethod
-    def _discover_cdp_endpoints(seed_cdp_url: str) -> List[str]:
-        """
-        Build a robust endpoint list from a seed URL:
-          - seed URL itself
-          - browser websocket from /json/version
-          - page target websockets from /json/list
-        """
-        base = FormFillerAgent._normalize_cdp_url(seed_cdp_url)
-        out: List[str] = []
-        seen = set()
-
-        def add(value: str) -> None:
-            v = (value or "").strip()
-            if not v:
-                return
-            key = v.lower()
-            if key in seen:
-                return
-            seen.add(key)
-            out.append(v)
-
-        add(base)
-
-        # If we only have websocket seed, derive http endpoint for probing.
-        probe_base = base
-        if base.startswith(("ws://", "wss://")):
-            parsed = urlparse(base)
-            if parsed.hostname and parsed.port:
-                probe_base = f"http://{parsed.hostname}:{parsed.port}"
-
-        if probe_base.startswith(("http://", "https://")):
+    async def _connect_existing_browser_with_retries(self, p: Any) -> Any:
+        base = self._normalize_cdp_url(self.cdp_url)
+        endpoints: List[str] = [base]
+        # Deterministic fallback: same endpoint's browser websocket if available.
+        if base.startswith(("http://", "https://")):
             try:
-                with urlopen(f"{probe_base}/json/version", timeout=2) as resp:
+                with urlopen(f"{base}/json/version", timeout=2) as resp:
                     version_data = json.loads(resp.read().decode("utf-8", errors="ignore"))
                 ws_browser = str(version_data.get("webSocketDebuggerUrl") or "").strip()
-                add(ws_browser)
+                if ws_browser and ws_browser.lower() != base.lower():
+                    endpoints.append(ws_browser)
             except Exception:
                 pass
 
-            try:
-                with urlopen(f"{probe_base}/json/list", timeout=2) as resp:
-                    list_data = json.loads(resp.read().decode("utf-8", errors="ignore"))
-                if isinstance(list_data, list):
-                    for item in list_data:
-                        if isinstance(item, dict):
-                            ws_target = str(item.get("webSocketDebuggerUrl") or "").strip()
-                            add(ws_target)
-            except Exception:
-                pass
-
-        return out
-
-    async def _connect_existing_browser_with_retries(self, p: Any) -> Any:
-        endpoints = self._discover_cdp_endpoints(self.cdp_url)
-        attempts_per_endpoint = 2
+        attempts_per_endpoint = 3
         errors: List[str] = []
 
         for endpoint in endpoints:
             for attempt in range(1, attempts_per_endpoint + 1):
                 try:
-                    browser = await p.chromium.connect_over_cdp(endpoint)
-                    logger.info(f"Attached to existing browser via CDP endpoint: {endpoint}")
+                    browser = await p.chromium.connect_over_cdp(endpoint, timeout=10000)
+                    logger.info(f"✓ Connected to existing browser via: {endpoint}")
                     return browser
                 except Exception as exc:
-                    errors.append(f"{endpoint} (try {attempt}/{attempts_per_endpoint}): {exc}")
-                    await asyncio.sleep(0.35)
+                    err_msg = str(exc)
+                    # Only add unique errors
+                    if attempt == attempts_per_endpoint:
+                        errors.append(f"{endpoint}: {err_msg}")
+                    if attempt < attempts_per_endpoint:
+                        await asyncio.sleep(0.5 * attempt)  # Exponential backoff
 
-        detail = "\n".join(errors[-8:]) if errors else "No CDP endpoint attempts were made."
+        detail = "\n".join(errors[-5:]) if errors else "No CDP endpoint attempts were made."
         raise RuntimeError(
-            "Could not attach to current browser session via CDP. "
-            "Tried discovered endpoints but all failed.\n"
-            f"{detail}"
+            "Could not attach to current browser session via CDP.\n"
+            f"Tried managed endpoint(s):\n{detail}\n\n"
+            "Make sure managed Chrome is running with remote debugging."
         )
 
     @staticmethod

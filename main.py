@@ -4,10 +4,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import re
+import shutil
 import subprocess
+import time
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
@@ -20,6 +21,7 @@ from agents.form_filler_agent import fill_application_form, list_cdp_tabs
 app = typer.Typer(help="MVP job form filler")
 console = Console()
 DEFAULT_CV_MD = (Path(__file__).resolve().parent / "cv" / "cv.md")
+MANAGED_CHROME_DIR = Path(__file__).resolve().parent / "output" / "managed_chrome_profile"
 
 
 def _normalize_cdp_url(cdp_url: str) -> str:
@@ -45,7 +47,7 @@ def _probe_cdp(cdp_url: str) -> Tuple[bool, str]:
             port = parsed.port
             if not port:
                 return False, normalized
-            with urlopen(f"http://{host}:{port}/json/version", timeout=2) as resp:
+            with urlopen(f"http://{host}:{port}/json/version", timeout=3) as resp:
                 payload = json.loads(resp.read().decode("utf-8", errors="ignore"))
             ws_url = str(payload.get("webSocketDebuggerUrl") or "").strip()
             if ws_url:
@@ -56,158 +58,207 @@ def _probe_cdp(cdp_url: str) -> Tuple[bool, str]:
 
     endpoint = f"{normalized}/json/version"
     try:
-        with urlopen(endpoint, timeout=2) as resp:
+        with urlopen(endpoint, timeout=3) as resp:
             payload = json.loads(resp.read().decode("utf-8", errors="ignore"))
         ws_url = str(payload.get("webSocketDebuggerUrl") or "").strip()
         if ws_url:
             return True, ws_url
+        # Even without ws_url, if we got a response, connection is valid
         return True, normalized
-    except Exception:
+    except Exception as e:
+        # Try /json endpoint as fallback
+        try:
+            with urlopen(f"{normalized}/json", timeout=3) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                if isinstance(data, list) and len(data) > 0:
+                    # CDP is reachable
+                    return True, normalized
+        except Exception:
+            pass
         return False, normalized
 
 
-def _extract_value_after_flag(cmdline: str, flag: str) -> Optional[str]:
-    # Supports both: --flag=value and --flag "value with spaces"
-    pattern = rf"{re.escape(flag)}(?:=|\s+)(\"[^\"]+\"|'[^']+'|\S+)"
-    m = re.search(pattern, cmdline, flags=re.IGNORECASE)
-    if not m:
+def _get_chrome_executable() -> Optional[str]:
+    """Find Chrome executable path."""
+    paths = [
+        os.path.join(os.environ.get("ProgramFiles", ""), "Google", "Chrome", "Application", "chrome.exe"),
+        os.path.join(os.environ.get("ProgramFiles(x86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe"),
+    ]
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _get_default_chrome_user_data_dir() -> Optional[Path]:
+    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+    if not local_app_data:
         return None
-    value = m.group(1).strip()
-    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-        value = value[1:-1]
-    return value.strip() or None
+    candidate = Path(local_app_data) / "Google" / "Chrome" / "User Data"
+    return candidate if candidate.exists() else None
 
 
-def _read_devtools_active_port(user_data_dir: str) -> List[str]:
-    candidates: List[str] = []
+def _copy_profile_tree_once(src_root: Path, dst_root: Path) -> None:
+    """
+    Create managed debug profile by cloning current Chrome profile once.
+    We intentionally avoid copying lock and crash artifacts.
+    """
+    if dst_root.exists():
+        return
+
+    dst_root.parent.mkdir(parents=True, exist_ok=True)
+    ignore_names = {
+        "SingletonLock",
+        "SingletonCookie",
+        "SingletonSocket",
+        "DevToolsActivePort",
+        "BrowserMetrics",
+        "Crashpad",
+        "Safe Browsing",
+        "ShaderCache",
+        "Code Cache",
+        "GrShaderCache",
+        "DawnCache",
+    }
+
+    def ignore_filter(_dir: str, names: list[str]) -> set[str]:
+        ignored = set()
+        for name in names:
+            if name in ignore_names:
+                ignored.add(name)
+        return ignored
+
+    shutil.copytree(src_root, dst_root, dirs_exist_ok=False, ignore=ignore_filter)
+
+
+def _ensure_managed_profile_dir() -> Path:
+    """
+    Return a persistent managed user-data-dir for Chrome remote debugging.
+    On first use, clone from the default Chrome User Data so auth/session persists.
+    """
+    managed_root = MANAGED_CHROME_DIR
+    if managed_root.exists():
+        return managed_root
+
+    src_root = _get_default_chrome_user_data_dir()
+    if not src_root:
+        managed_root.mkdir(parents=True, exist_ok=True)
+        return managed_root
+
+    console.print("[cyan]Preparing managed Chrome profile (first run only)...[/cyan]")
     try:
-        path = Path(user_data_dir) / "DevToolsActivePort"
-        if not path.exists():
-            return []
-        lines = [ln.strip() for ln in path.read_text(encoding="utf-8", errors="ignore").splitlines() if ln.strip()]
-        if not lines:
-            return []
-        port = lines[0]
-        if port.isdigit():
-            candidates.append(f"http://127.0.0.1:{port}")
-            if len(lines) >= 2:
-                ws_path = lines[1]
-                if ws_path.startswith("ws://") or ws_path.startswith("wss://"):
-                    candidates.append(ws_path)
-                elif ws_path.startswith("/"):
-                    candidates.append(f"ws://127.0.0.1:{port}{ws_path}")
+        _copy_profile_tree_once(src_root, managed_root)
     except Exception:
-        return []
-    return candidates
+        # Fallback to empty managed directory if cloning fails.
+        managed_root.mkdir(parents=True, exist_ok=True)
+    return managed_root
 
 
-def _get_browser_process_commandlines() -> List[str]:
+def _parse_cdp_port(cdp_url: str) -> int:
+    normalized = _normalize_cdp_url(cdp_url)
+    parsed = urlparse(normalized)
+    return parsed.port or 9222
+
+
+def _start_managed_chrome(port: int) -> bool:
     """
-    Best-effort: read running Chrome/Edge command lines on Windows.
+    Launch (or relaunch) Chrome in deterministic debug mode.
+    Keeps session via Chrome's own session restore.
     """
+    chrome_exe = _get_chrome_executable()
+    if not chrome_exe:
+        console.print("[red]Chrome executable not found.[/red]")
+        return False
+
+    # Required on Windows to ensure debug flag applies to the new browser process.
+    console.print("[cyan]Restarting Chrome in managed debug mode...[/cyan]")
     try:
-        proc = subprocess.run(
-            [
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('chrome.exe','msedge.exe') } | Select-Object -ExpandProperty CommandLine",
-            ],
+        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"],
             capture_output=True,
-            text=True,
-            timeout=4,
+            timeout=8,
             check=False,
         )
-        out = proc.stdout or ""
-        return [line.strip() for line in out.splitlines() if line.strip()]
     except Exception:
-        return []
+        pass
+    time.sleep(1.5)
+
+    managed_user_data_dir = _ensure_managed_profile_dir()
+
+    args = [
+        chrome_exe,
+        f"--remote-debugging-port={port}",
+        "--remote-debugging-address=127.0.0.1",
+        f"--user-data-dir={managed_user_data_dir}",
+        "--profile-directory=Default",
+        "--restore-last-session",
+        "--no-first-run",
+        "--no-default-browser-check",
+    ]
+
+    try:
+        subprocess.Popen(
+            args,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+        )
+        return True
+    except Exception:
+        return False
 
 
-def _discover_cdp_candidates(seed_cdp_url: str) -> List[str]:
-    out: List[str] = []
-    seen = set()
-
-    def add(value: str) -> None:
-        v = (value or "").strip()
-        if not v:
-            return
-        key = v.lower()
-        if key in seen:
-            return
-        seen.add(key)
-        out.append(v)
-
-    add(_normalize_cdp_url(seed_cdp_url))
-
-    for port in [9222, 9223, 9333, 9229, 9230]:
-        add(f"http://127.0.0.1:{port}")
-        add(f"http://localhost:{port}")
-
-    cmdlines = _get_browser_process_commandlines()
-    for cmd in cmdlines:
-        dbg_port = _extract_value_after_flag(cmd, "--remote-debugging-port")
-        if dbg_port and dbg_port.isdigit():
-            add(f"http://127.0.0.1:{dbg_port}")
-            add(f"http://localhost:{dbg_port}")
-
-        user_data_dir = _extract_value_after_flag(cmd, "--user-data-dir")
-        if user_data_dir:
-            for cdp in _read_devtools_active_port(user_data_dir):
-                add(cdp)
-
-    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
-    if local_app_data:
-        roots = [
-            Path(local_app_data) / "Google" / "Chrome" / "User Data",
-            Path(local_app_data) / "Microsoft" / "Edge" / "User Data",
-        ]
-        for root in roots:
-            for cdp in _read_devtools_active_port(str(root)):
-                add(cdp)
-
-    return out
-
-
-def _ensure_existing_browser_connection(cdp_url: str) -> str:
-    """
-    Interactive recovery flow for attaching to the currently-open Chrome session.
-    """
-    candidates = _discover_cdp_candidates(cdp_url)
-    reachable: List[str] = []
-    for candidate in candidates:
-        ok, resolved = _probe_cdp(candidate)
+def _wait_for_cdp(cdp_url: str, timeout_seconds: int = 25) -> Optional[str]:
+    start = time.time()
+    while (time.time() - start) < timeout_seconds:
+        ok, resolved = _probe_cdp(cdp_url)
         if ok:
-            reachable.append(resolved)
+            return resolved
+        time.sleep(0.75)
+    return None
 
-    if reachable:
-        chosen = reachable[0]
-        console.print(f"[green]Connected to current browser endpoint:[/green] {chosen}")
-        return chosen
 
-    console.print("\n[yellow]Could not reach Chrome debugging endpoint.[/yellow]")
-    console.print("[cyan]To use your current browser session (without opening a new browser):[/cyan]")
-    console.print("1. In the same Chrome window, open: [bold]chrome://inspect/#remote-debugging[/bold]")
-    console.print('2. Enable: [bold]"Allow remote debugging for this browser instance"[/bold]')
-    console.print("3. Keep your job tab open, then return here.")
-    console.print("4. Confirm it still shows: [bold]Server running at: 127.0.0.1:9222[/bold]")
-    console.print("")
+def _ensure_managed_debug_chrome(cdp_url: str) -> str:
+    """
+    Deterministic mode:
+      - attach if already reachable
+      - otherwise restart Chrome once in debug mode and wait
+    """
+    initial = _wait_for_cdp(cdp_url, timeout_seconds=2)
+    if initial:
+        console.print(f"[green]Connected to managed Chrome:[/green] {initial}")
+        return initial
 
-    while True:
-        retry = typer.confirm("Retry connection to your current Chrome session now?", default=True)
-        if not retry:
-            raise typer.Exit(1)
-        candidates = _discover_cdp_candidates(cdp_url)
-        reachable = []
-        for candidate in candidates:
-            ok, resolved = _probe_cdp(candidate)
-            if ok:
-                reachable.append(resolved)
-        if reachable:
-            chosen = reachable[0]
-            console.print(f"[green]Connected to your current Chrome session:[/green] {chosen}")
-            return chosen
-        console.print("[yellow]Still not reachable. Please enable remote debugging in chrome://inspect/#remote-debugging and retry.[/yellow]")
+    port = _parse_cdp_port(cdp_url)
+    if not _start_managed_chrome(port):
+        raise typer.Exit("Failed to launch managed Chrome in debug mode.")
+
+    resolved = _wait_for_cdp(f"http://127.0.0.1:{port}", timeout_seconds=30)
+    if resolved:
+        console.print(f"[green]Managed Chrome ready:[/green] {resolved}")
+        return resolved
+
+    # One recovery pass: rebuild managed profile and relaunch.
+    console.print("[yellow]Managed profile may be stale. Rebuilding once and retrying...[/yellow]")
+    try:
+        if MANAGED_CHROME_DIR.exists():
+            shutil.rmtree(MANAGED_CHROME_DIR, ignore_errors=True)
+    except Exception:
+        pass
+    if _start_managed_chrome(port):
+        resolved = _wait_for_cdp(f"http://127.0.0.1:{port}", timeout_seconds=30)
+        if resolved:
+            console.print(f"[green]Managed Chrome ready after rebuild:[/green] {resolved}")
+            return resolved
+
+    chrome_exe = _get_chrome_executable() or "chrome.exe"
+    managed_user_data_dir = _ensure_managed_profile_dir()
+    raise typer.Exit(
+        "Managed Chrome did not expose CDP.\n"
+        "Run this manually once, then retry:\n"
+        f'"{chrome_exe}" --remote-debugging-port={port} --remote-debugging-address=127.0.0.1 '
+        f'--user-data-dir="{managed_user_data_dir}" --profile-directory=Default --restore-last-session'
+    )
 
 
 def _select_tab_url(cdp_url: str, tab_index: Optional[int]) -> str:
@@ -301,7 +352,7 @@ def fill_form(
         url = typer.prompt("Job application URL (paste from your browser tab)").strip()
 
     if use_existing_browser:
-        cdp_url = _ensure_existing_browser_connection(cdp_url)
+        cdp_url = _ensure_managed_debug_chrome(cdp_url)
 
     resolved_tab_url = tab_url
     if use_existing_browser and resolved_tab_url is None and tab_index is not None:
