@@ -1,56 +1,52 @@
-"""
-SQLAlchemy async engine + session factory.
-Tables are created automatically from models via Base.metadata.create_all.
-"""
-from __future__ import annotations
-
-from contextlib import asynccontextmanager
+"""Database connection and session management."""
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 from core.config import settings
 
-
-# ── Async engine (used by the application) ──────────────────────────────────
-from sqlalchemy.pool import NullPool
-
+# Create async engine
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    poolclass=NullPool,     # No persistent pool — fresh connection each time.
-                            # Prevents WinError 64 on Windows/Docker from stale
-                            # connections accumulating across CLI invocations.
+    future=True,
+    pool_pre_ping=True,
 )
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
+# Create async session factory
+async_session_maker = sessionmaker(
+    engine,
     class_=AsyncSession,
     expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
 )
 
-
-class Base(DeclarativeBase):
-    """All ORM models inherit from this."""
-    pass
+# Create declarative base for ORM models
+Base = declarative_base()
 
 
-@asynccontextmanager
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Context manager for a database session."""
-    async with AsyncSessionLocal() as session:
+    """
+    Dependency for FastAPI routes to get database session.
+
+    Usage:
+        @app.get("/items")
+        async def get_items(session: AsyncSession = Depends(get_session)):
+            ...
+    """
+    async with async_session_maker() as session:
         try:
             yield session
             await session.commit()
         except Exception:
             await session.rollback()
             raise
+        finally:
+            await session.close()
 
 
-async def init_db() -> None:
-    """Create all database tables from SQLAlchemy models."""
+async def init_db():
+    """Initialize database - create all tables."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

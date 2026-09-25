@@ -1,0 +1,134 @@
+# Knowledge Base - Learned from historical cover letters
+# Created: 2026-04-28T12:27:44.764353
+# Last Updated: 2026-04-28T12:27:44.764353
+# Total Files Analyzed: 45
+#
+# This KB is automatically learned by analyzing which projects, skills, and
+# experience were emphasized in past applications for each job category.
+
+position_categories:
+
+  - category: "Energy Systems"
+    applications_analyzed: 22
+
+    # Projects historically used for Energy Systems positions
+    projects:
+      - "Battery Cell Production"
+      - "Benteler"
+      - "Energy Audit Rome"
+      - "FORVIA HELLA / SMT Production"
+      - "HIK Electrical Schema"
+      - "Hybrid Microgrid"
+      - "Hydrogen Electrolysis"
+      - "Personalized Deep-Research"
+      - "Reformer Unit"
+
+    # Skills historically emphasized
+    skills:
+      - "Battery Storage"
+      - "Data Analysis"
+      - "Energy Systems"
+      - "Git"
+      - "MATLAB"
+      - "Machine Learning"
+      - "Power Systems"
+      - "Python"
+      - "R"
+      - "Renewable Energy"
+      - "SQL"
+
+  - category: "General"
+    applications_analyzed: 14
+
+    # Projects historically used for General positions
+    projects:
+      - "Benteler"
+      - "Energy Audit Rome"
+      - "FORVIA HELLA / SMT Production"
+      - "HIK Electrical Schema"
+      - "Hybrid Microgrid"
+      - "Hydrogen Electrolysis"
+      - "Reformer Unit"
+
+    # Skills historically emphasized
+    skills:
+      - "C++"
+      - "Data Analysis"
+      - "Energy Systems"
+      - "Git"
+      - "MATLAB"
+      - "Machine Learning"
+      - "Power Systems"
+      - "PyTorch"
+      - "Python"
+      - "R"
+      - "Renewable Energy"
+      - "SQL"
+      - "TensorFlow"
+      - "scikit-learn"
+
+  - category: "AI/ML"
+    applications_analyzed: 4
+
+    # Projects historically used for AI/ML positions
+    projects:
+      - "Battery Cell Production"
+      - "Energy Audit Rome"
+      - "FORVIA HELLA / SMT Production"
+      - "Hybrid Microgrid"
+
+    # Skills historically emphasized
+    skills:
+      - "C++"
+      - "Deep Learning"
+      - "Energy Systems"
+      - "Git"
+      - "MATLAB"
+      - "Machine Learning"
+      - "Power Systems"
+      - "Python"
+      - "R"
+      - "Renewable Energy"
+
+  - category: "Research"
+    applications_analyzed: 3
+
+    # Projects historically used for Research positions
+    projects:
+      []
+
+    # Skills historically emphasized
+    skills:
+      - "R"
+
+  - category: "Software Engineering"
+    applications_analyzed: 1
+
+    # Projects historically used for Software Engineering positions
+    projects:
+      - "Energy Audit Rome"
+
+    # Skills historically emphasized
+    skills:
+      - "Energy Systems"
+      - "Power Systems"
+      - "R"
+
+  - category: "FinTech/Finance"
+    applications_analyzed: 1
+
+    # Projects historically used for FinTech/Finance positions
+    projects:
+      - "Benteler"
+      - "Energy Audit Rome"
+      - "Hybrid Microgrid"
+
+    # Skills historically emphasized
+    skills:
+      - "Data Analysis"
+      - "Git"
+      - "MATLAB"
+      - "Machine Learning"
+      - "Python"
+      - "R"
+      - "Renewable Energy"

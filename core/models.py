@@ -125,7 +125,7 @@ class Job(Base):
     date_scraped = Column(DateTime, server_default=func.now())
     match_score = Column(Float, nullable=True)           # LLM 0-10 score
     match_reasons = Column(JSON, nullable=True)          # {"pros": [...], "cons": [...]}
-    embedding = Column(Vector(384), nullable=True)       # sentence-transformer embedding
+    embedding = Column(Vector(1536), nullable=True)      # text-embedding-3-small embedding
     status = Column(String(32), default="discovered")
     raw_data = Column(JSON, nullable=True)               # original scraped data
 
@@ -157,10 +157,49 @@ class CVProfile(Base):
     education = Column(JSON, nullable=True)              # list of education dicts
     certifications = Column(JSON, nullable=True)
     raw_text = Column(Text, nullable=True)               # full CV text (for LLM context)
-    embedding = Column(Vector(384), nullable=True)       # profile embedding
+    embedding = Column(Vector(1536), nullable=True)      # text-embedding-3-small profile embedding
     source_file = Column(String(512), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
+
+
+class UserProfile(Base):
+    """Comprehensive user profile built from all documents."""
+    __tablename__ = "user_profile"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(String(64), unique=True, nullable=False, default="default")
+
+    # Personal information
+    full_name = Column(String(256))
+    email = Column(String(256))
+    phone = Column(String(64))
+    location = Column(String(256))
+    linkedin_url = Column(String(512))
+    github_url = Column(String(512))
+
+    # Professional summary
+    current_title = Column(String(256))
+    years_experience = Column(BigInteger)
+    career_summary = Column(Text)
+
+    # Structured data (JSON)
+    education = Column(JSON)  # [{degree, institution, year, gpa, field}]
+    technical_skills = Column(JSON)  # {category: [skills]}
+    languages = Column(JSON)  # [{language, proficiency}]
+    certifications = Column(JSON)  # [{name, issuer, date}]
+
+    # Preferences
+    job_preferences = Column(JSON)  # {locations, remote, salary_min, ...}
+    career_goals = Column(Text)
+
+    # Writing style analysis
+    writing_style = Column(JSON)  # {tone, common_phrases, structure}
+
+    # Metadata
+    source_documents = Column(JSON)  # [{file_path, category, processed_at}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Document(Base):
@@ -172,7 +211,7 @@ class Document(Base):
     filename = Column(String(256), nullable=False)
     content_text = Column(Text, nullable=True)           # extracted text
     content_bytes = Column(Text, nullable=True)          # base64-encoded binary
-    embedding = Column(Vector(384), nullable=True)
+    embedding = Column(Vector(1536), nullable=True)
     metadata_ = Column("metadata", JSON, nullable=True)
     uploaded_at = Column(DateTime, server_default=func.now())
 
@@ -268,7 +307,7 @@ class UserMemory(Base):
     remote_preference = Column(String(16), default="flexible")
     notes = Column(Text, nullable=True)
     # Centroid of liked-job embeddings — updated after each feedback round
-    preference_embedding = Column(Vector(384), nullable=True)
+    preference_embedding = Column(Vector(1536), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -286,7 +325,7 @@ class JobFeedback(Base):
     decision = Column(String(32), nullable=False)
     user_score = Column(Float, nullable=True)         # overrides LLM score if set
     reason = Column(Text, nullable=True)
-    job_embedding_snapshot = Column(Vector(384), nullable=True)
+    job_embedding_snapshot = Column(Vector(1536), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     job = relationship("Job", foreign_keys=[job_id])
