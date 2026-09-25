@@ -57,6 +57,7 @@ reportlab>=4.2.0            # alternative PDF generation
 # --- Email & outreach ---
 # (uses stdlib smtplib + aiosmtplib for async)
 aiosmtplib>=3.0.0
+aiosqlite>=0.20.0
 email-validator>=2.1.0
 
 # --- API & CLI ---
